@@ -1,0 +1,11 @@
+{
+  "name": "location-manager",
+  "version": "1.0.0",
+  "description": "Secure location manager with Google Maps",
+  "scripts": {
+    "build": "echo 'No build required'"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.0.0"
+  }
+}
