@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Manager Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .tab-btn:hover {
+            background: #5a67d8;
+        }
+
+        .tab-btn.active {
+            background: #764ba2;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .form-section {
+            background: #f7f9fc;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .location-item {
+            background: #f7f9fc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 2px solid transparent;
+        }
+
+        .location-item:hover {
+            border-color: #667eea;
+        }
+
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .location-title {
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .location-details {
+            color: #666;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .location-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .counter-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        #qrcode {
+            padding: 20px;
+            background: white;
+            display: inline-block;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .qr-section {
+            text-align: center;
+        }
+
+        .url-display {
+            background: #f7f9fc;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Location Manager Dashboard</h1>
+            <p>Manage your locations and generate QR codes</p>
+            <div class="tabs">
+                <button id="dashboard-tab-btn" class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button id="qr-tab-btn" class="tab-btn" onclick="switchTab('qr')">QR Code</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Panel -->
+        <div id="dashboard-panel" class="panel">
+            <div class="form-section">
+                <h2 style="margin-bottom: 20px;">Add New Location</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Location Name *</label>
+                        <input type="text" id="loc-name" placeholder="Downtown Office">
+                    </div>
+                    <div class="form-group">
+                        <label>Address *</label>
+                        <input type="text" id="loc-address" placeholder="123 Main St, City, State">
+                    </div>
+                    <div class="form-group">
+                        <label>Location ID</label>
+                        <input type="text" id="loc-number" placeholder="LOC-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" id="loc-phone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Venmo</label>
+                        <input type="text" id="loc-link" placeholder="@username">
+                    </div>
+                    <div class="form-group">
+                        <label>Coordinates</label>
+                        <input type="text" id="loc-coords" placeholder="34.0522,-118.2437">
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="saveLocation()">Add Location</button>
+                    <button class="btn btn-secondary" onclick="clearInputs()">Clear</button>
+                </div>
+            </div>
+
+            <div id="message-area"></div>
+
+            <h2 style="margin-bottom: 20px;">Your Locations</h2>
+            <div id="locations-container">
+                <div class="empty-state">No locations added yet</div>
+            </div>
+        </div>
+
+        <!-- QR Code Panel -->
+        <div id="qr-panel" class="panel hidden">
+            <div class="qr-section">
+                <h2>QR Code for Map Access</h2>
+                <p style="color: #666; margin-top: 10px;">Scan this code to view all locations on the map</p>
+                
+                <div id="qrcode"></div>
+                
+                <button class="btn btn-primary" onclick="createQR()">Generate QR Code</button>
+                
+                <div id="url-output" class="url-display" style="display: none;">
+                    <strong>URL:</strong><br>
+                    <span id="url-text"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple, compatible JavaScript - no template literals or arrow functions
+        
+        // Your Netlify URL
+        var SITE_URL = 'https://ephemeral-pasca-1f06c4.netlify.app/';
+        
+        // Global variables
+        var locations = [];
+        var editingId = null;
+        
+        // Load locations on start
+        function init() {
+            loadLocations();
+            displayLocations();
+        }
+        
+        // Load from localStorage
+        function loadLocations() {
+            var stored = localStorage.getItem('locations');
+            if (stored) {
+                try {
+                    locations = JSON.parse(stored);
+                } catch(e) {
+                    locations = [];
+                }
+            }
+        }
+        
+        // Save to localStorage
+        function saveToStorage() {
+            localStorage.setItem('locations', JSON.stringify(locations));
+        }
+        
+        // Switch tabs
+        function switchTab(tabName) {
+            // Hide all panels
+            document.getElementById('dashboard-panel').classList.add('hidden');
+            document.getElementById('qr-panel').classList.add('hidden');
+            
+            // Remove active from all buttons
+            document.getElementById('dashboard-tab-btn').classList.remove('active');
+            document.getElementById('qr-tab-btn').classList.remove('active');
+            
+            // Show selected panel
+            if (tabName === 'dashboard') {
+                document.getElementById('dashboard-panel').classList.remove('hidden');
+                document.getElementById('dashboard-tab-btn').classList.add('active');
+            } else if (tabName === 'qr') {
+                document.getElementById('qr-panel').classList.remove('hidden');
+                document.getElementById('qr-tab-btn').classList.add('active');
+                createQR();
+            }
+        }
+        
+        // Save location
+        function saveLocation() {
+            var name = document.getElementById('loc-name').value.trim();
+            var address = document.getElementById('loc-address').value.trim();
+            var number = document.getElementById('loc-number').value.trim();
+            var phone = document.getElementById('loc-phone').value.trim();
+            var link = document.getElementById('loc-link').value.trim();
+            var coords = document.getElementById('loc-coords').value.trim();
+            
+            if (!name || !address) {
+                showMessage('Please enter name and address', 'error');
+                return;
+            }
+            
+            var coordinates = null;
+            if (coords && coords.indexOf(',') > -1) {
+                var parts = coords.split(',');
+                if (parts.length === 2) {
+                    var lat = parseFloat(parts[0].trim());
+                    var lng = parseFloat(parts[1].trim());
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        coordinates = { lat: lat, lng: lng };
+                    }
+                }
+            }
+            
+            var location = {
+                id: editingId || 'loc_' + Date.now(),
+                name: name,
+                address: address,
+                number: number,
+                phone: phone,
+                link: link,
+                coordinates: coordinates,
+                counter: 0
+            };
+            
+            if (editingId) {
+                // Update existing
+                for (var i = 0; i < locations.length; i++) {
+                    if (locations[i].id === editingId) {
+                        location.counter = locations[i].counter;
+                        locations[i] = location;
+                        break;
+                    }
+                }
+                editingId = null;
+            } else {
+                // Add new
+                locations.push(location);
+            }
+            
+            saveToStorage();
+            displayLocations();
+            clearInputs();
+            showMessage('Location saved successfully!', 'success');
+        }
+        
+        // Clear form
+        function clearInputs() {
+            document.getElementById('loc-name').value = '';
+            document.getElementById('loc-address').value = '';
+            document.getElementById('loc-number').value = '';
+            document.getElementById('loc-phone').value = '';
+            document.getElementById('loc-link').value = '';
+            document.getElementById('loc-coords').value = '';
+            editingId = null;
+        }
+        
+        // Display locations
+        function displayLocations() {
+            var container = document.getElementById('locations-container');
+            
+            if (locations.length === 0) {
+                container.innerHTML = '<div class="empty-state">No locations added yet</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            for (var i = 0; i < locations.length; i++) {
+                var loc = locations[i];
+                var item = document.createElement('div');
+                item.className = 'location-item';
+                
+                var html = '<div class="location-header">';
+                html += '<div class="location-title">' + loc.name + '</div>';
+                html += '</div>';
+                html += '<div class="location-details">';
+                html += '<div>📍 ' + loc.address + '</div>';
+                
+                if (loc.number) {
+                    html += '<div>🔢 ID: ' + loc.number + '</div>';
+                }
+                if (loc.phone) {
+                    html += '<div>📞 ' + loc.phone + '</div>';
+                }
+                if (loc.link) {
+                    html += '<div>💳 Venmo: ' + loc.link + '</div>';
+                }
+                if (loc.coordinates) {
+                    html += '<div>🗺️ Lat: ' + loc.coordinates.lat + ', Lng: ' + loc.coordinates.lng + '</div>';
+                }
+                
+                html += '<div class="counter-badge">Visits: ' + loc.counter + '</div>';
+                html += '</div>';
+                html += '<div class="location-actions">';
+                html += '<button class="btn-small btn-primary" onclick="editLocation(\'' + loc.id + '\')">Edit</button>';
+                html += '<button class="btn-small btn-secondary" onclick="resetCounter(\'' + loc.id + '\')">Reset Counter</button>';
+                html += '<button class="btn-small btn-danger" onclick="removeLocation(\'' + loc.id + '\')">Delete</button>';
+                html += '</div>';
+                
+                item.innerHTML = html;
+                container.appendChild(item);
+            }
+        }
+        
+        // Edit location
+        function editLocation(id) {
+            var loc = null;
+            for (var i = 0; i < locations.length; i++) {
+                if (locations[i].id === id) {
+                    loc = locations[i];
+                    break;
+                }
+            }
+            
+            if (!loc) return;
+            
+            document.getElementById('loc-name').value = loc.name;
+            document.getElementById('loc-address').value = loc.address;
+            document.getElementById('loc-number').value = loc.number || '';
+            document.getElementById('loc-phone').value = loc.phone || '';
+            document.getElementById('loc-link').value = loc.link || '';
+            
+            if (loc.coordinates) {
+                document.getElementById('loc-coords').value = loc.coordinates.lat + ',' + loc.coordinates.lng;
+            } else {
+                document.getElementById('loc-coords').value = '';
+            }
+            
+            editingId = id;
+            window.scrollTo(0, 0);
+            showMessage('Editing location. Click "Add Location" to save changes.', 'success');
+        }
+        
+        // Remove location
+        function removeLocation(id) {
+            if (!confirm('Delete this location?')) return;
+            
+            var newLocations = [];
+            for (var i = 0; i < locations.length; i++) {
+                if (locations[i].id !== id) {
+                    newLocations.push(locations[i]);
+                }
+            }
+            locations = newLocations;
+            
+            saveToStorage();
+            displayLocations();
+            showMessage('Location deleted', 'success');
+        }
+        
+        // Reset counter
+        function resetCounter(id) {
+            for (var i = 0; i < locations.length; i++) {
+                if (locations[i].id === id) {
+                    locations[i].counter = 0;
+                    break;
+                }
+            }
+            saveToStorage();
+            displayLocations();
+            showMessage('Counter reset', 'success');
+        }
+        
+        // Create QR code
+        function createQR() {
+            var container = document.getElementById('qrcode');
+            container.innerHTML = '';
+            
+            if (locations.length === 0) {
+                container.innerHTML = '<p style="color: #999;">Add locations first</p>';
+                document.getElementById('url-output').style.display = 'none';
+                return;
+            }
+            
+            var data = JSON.stringify(locations);
+            var encoded = encodeURIComponent(data);
+            var url = SITE_URL + '#' + encoded;
+            
+            new QRCode(container, {
+                text: url,
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff'
+            });
+            
+            document.getElementById('url-text').textContent = url;
+            document.getElementById('url-output').style.display = 'block';
+        }
+        
+        // Show message
+        function showMessage(text, type) {
+            var area = document.getElementById('message-area');
+            area.innerHTML = '<div class="message ' + type + '">' + text + '</div>';
+            
+            setTimeout(function() {
+                area.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Start the app
+        window.onload = init;
+    </script>
+</body>
+</html>
