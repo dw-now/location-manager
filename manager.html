@@ -1,270 +1,1186 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Manager</title>
+    <title>Location Manager - Table View</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
             margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .header {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        h1 {
-            color: #333;
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .form-row {
-            margin-bottom: 15px;
+
+        .header h1 {
+            font-size: 24px;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
         }
-        input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background: #667eea;
-            color: white;
+
+        .stat-card {
+            background: #f7fafc;
             padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #5a67d8;
-        }
-        .location-box {
-            background: #f5f5f5;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .location-box h3 {
-            margin-top: 0;
-        }
-        #qrcode {
-            margin: 20px 0;
+            border-radius: 8px;
             text-align: center;
         }
-        .tab-buttons {
-            margin: 20px 0;
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
         }
-        .tab-content {
-            display: none;
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
         }
-        .tab-content.active {
-            display: block;
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        .delete-btn {
+
+        .action-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box::after {
+            content: "🔍";
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-outline:hover {
+            background: #f7fafc;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            padding: 15px 20px;
+            background: #f7fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            background: white;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .view-btn {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .view-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f7fafc;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        th {
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f4f8;
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .location-name-cell {
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .counter-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #3182ce;
+        }
+
+        .btn-delete {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-delete:hover {
             background: #e53e3e;
         }
-        .delete-btn:hover {
-            background: #c53030;
+
+        .btn-reset {
+            background: #ed8936;
+            color: white;
         }
-        #url-display {
-            background: #f0f0f0;
+
+        .btn-reset:hover {
+            background: #dd6b20;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #718096;
+        }
+
+        .empty-state h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            color: #1a202c;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
             padding: 10px;
-            margin: 10px 0;
-            word-break: break-all;
-            font-size: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .location-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .location-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .qr-container {
+            padding: 40px;
+            text-align: center;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .action-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-box {
+                max-width: 100%;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            table {
+                min-width: 900px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Location Manager</h1>
-        
-        <div class="tab-buttons">
-            <button onclick="showDashboard()">Dashboard</button>
-            <button onclick="showQR()">QR Code</button>
-        </div>
-        
-        <div id="dashboard" class="tab-content active">
-            <h2>Add Location</h2>
-            
-            <div class="form-row">
-                <label>Name</label>
-                <input type="text" id="name" placeholder="Location name">
+    <div class="header">
+        <div class="header-content">
+            <h1>📍 Location Manager</h1>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalLocations">0</div>
+                    <div class="stat-label">Locations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVisits">0</div>
+                    <div class="stat-label">Total Visits</div>
+                </div>
             </div>
-            
-            <div class="form-row">
-                <label>Address</label>
-                <input type="text" id="address" placeholder="Full address">
-            </div>
-            
-            <div class="form-row">
-                <label>ID Number</label>
-                <input type="text" id="number" placeholder="Location ID">
-            </div>
-            
-            <div class="form-row">
-                <label>Phone</label>
-                <input type="text" id="phone" placeholder="Phone number">
-            </div>
-            
-            <div class="form-row">
-                <label>Venmo</label>
-                <input type="text" id="link" placeholder="Venmo username">
-            </div>
-            
-            <button onclick="addNewLocation()">Save Location</button>
-            <button onclick="clearAll()">Clear Form</button>
-            
-            <h2>Saved Locations</h2>
-            <div id="list"></div>
-        </div>
-        
-        <div id="qrtab" class="tab-content">
-            <h2>QR Code</h2>
-            <p>This QR code contains all your locations</p>
-            <div id="qrcode"></div>
-            <button onclick="makeQR()">Generate QR Code</button>
-            <div id="url-display"></div>
         </div>
     </div>
 
+    <div class="container">
+        <div class="action-bar">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search locations..." onkeyup="searchLocations()">
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="openAddModal()">
+                    ➕ Add Location
+                </button>
+                <button class="btn btn-secondary" onclick="showQRCode()">
+                    📱 Generate QR
+                </button>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn btn-outline" onclick="toggleExportMenu()">
+                        📥 Export ▼
+                    </button>
+                    <div id="exportMenu" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 5px; z-index: 100;">
+                        <button class="btn btn-outline" style="display: block; width: 100%; text-align: left; border: none; border-radius: 0;" onclick="exportExcel()">📊 Export as Excel</button>
+                        <button class="btn btn-outline" style="display: block; width: 100%; text-align: left; border: none; border-radius: 0;" onclick="exportCSV()">📄 Export as CSV</button>
+                        <button class="btn btn-outline" style="display: block; width: 100%; text-align: left; border: none; border-radius: 0;" onclick="exportJSON()">💾 Export as JSON</button>
+                    </div>
+                </div>
+                <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">
+                    📤 Import
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h3 style="margin: 0; color: #2d3748;">All Locations</h3>
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="setView('table')">Table</button>
+                    <button class="view-btn" onclick="setView('grid')">Grid</button>
+                </div>
+            </div>
+            
+            <div id="tableView">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Address</th>
+                            <th>Phone</th>
+                            <th>Cost</th>
+                            <th>Availability</th>
+                            <th>Venmo</th>
+                            <th>Coordinates</th>
+                            <th>Visits</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locationsTableBody">
+                        <!-- Locations will be added here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="gridView" style="display: none;" class="grid-view">
+                <!-- Grid cards will be added here -->
+            </div>
+            
+            <div id="qrView" style="display: none;" class="qr-container">
+                <h2>QR Code for Map Access</h2>
+                <div id="qrcode"></div>
+                <p style="color: #718096; margin-top: 20px;">Scan to view all locations on the map</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="locationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Location</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Location Name *</label>
+                        <input type="text" id="modalName" placeholder="e.g., Downtown Office">
+                    </div>
+                    <div class="form-group">
+                        <label>Location ID/Number</label>
+                        <input type="text" id="modalNumber" placeholder="e.g., LOC-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Address *</label>
+                        <input type="text" id="modalAddress" placeholder="123 Main St, City, State">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="modalPhone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Cost ($)</label>
+                        <input type="number" id="modalCost" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Availability</label>
+                        <input type="number" id="modalAvailability" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Venmo Username</label>
+                        <input type="text" id="modalLink" placeholder="@username">
+                    </div>
+                    <div class="form-group">
+                        <label>Coordinates (lat,lng)</label>
+                        <input type="text" id="modalCoords" placeholder="34.0522,-118.2437">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveLocation()">Save Location</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import file input (hidden) -->
+    <input type="file" id="importFile" style="display: none;" accept=".json,.csv,.xlsx,.xls" onchange="handleImport(event)">
+
     <script>
-        var SITE_URL = 'https://ephemeral-pasca-1f06c4.netlify.app/';
-        var data = [];
-        
-        function loadData() {
-            var saved = localStorage.getItem('locations');
-            if (saved) {
+        // Global variables
+        let locations = [];
+        let editingId = null;
+        let currentView = 'table';
+        const SITE_URL = 'https://ephemeral-pasca-1f06c4.netlify.app/';
+
+        // Load locations on start
+        function init() {
+            loadLocations();
+            renderLocations();
+            updateStats();
+        }
+
+        // Load locations from localStorage
+        function loadLocations() {
+            const stored = localStorage.getItem('locations');
+            if (stored) {
                 try {
-                    data = JSON.parse(saved);
-                } catch(e) {
-                    data = [];
+                    locations = JSON.parse(stored);
+                } catch (e) {
+                    locations = [];
                 }
             }
-            showList();
         }
-        
-        function saveData() {
-            localStorage.setItem('locations', JSON.stringify(data));
+
+        // Save locations to localStorage
+        function saveToStorage() {
+            localStorage.setItem('locations', JSON.stringify(locations));
         }
-        
-        function addNewLocation() {
-            var name = document.getElementById('name').value;
-            var address = document.getElementById('address').value;
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalLocations').textContent = locations.length;
+            const totalVisits = locations.reduce((sum, loc) => sum + (loc.counter || 0), 0);
+            document.getElementById('totalVisits').textContent = totalVisits;
+        }
+
+        // Render locations based on current view
+        function renderLocations() {
+            updateStats();
+            
+            if (currentView === 'table') {
+                renderTable();
+            } else if (currentView === 'grid') {
+                renderGrid();
+            }
+        }
+
+        // Render table view
+        function renderTable() {
+            const tbody = document.getElementById('locationsTableBody');
+            
+            if (locations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><h3>No locations yet</h3><p>Click "Add Location" to get started</p></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = locations.map(loc => `
+                <tr>
+                    <td>${loc.number || loc.id || '-'}</td>
+                    <td class="location-name-cell">${loc.name}</td>
+                    <td>${loc.address}</td>
+                    <td>${loc.phone || '-'}</td>
+                    <td>${loc.cost ? '$' + parseFloat(loc.cost).toFixed(2) : '-'}</td>
+                    <td>${loc.availability !== undefined && loc.availability !== null ? loc.availability : '-'}</td>
+                    <td>${loc.link || '-'}</td>
+                    <td>${loc.coordinates ? `${loc.coordinates.lat.toFixed(4)}, ${loc.coordinates.lng.toFixed(4)}` : '-'}</td>
+                    <td><span class="counter-badge">${loc.counter || 0}</span></td>
+                    <td class="actions-cell">
+                        <button class="btn-icon btn-edit" onclick="editLocation('${loc.id}')">✏️</button>
+                        <button class="btn-icon btn-reset" onclick="resetCounter('${loc.id}')">🔄</button>
+                        <button class="btn-icon btn-delete" onclick="deleteLocation('${loc.id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Render grid view
+        function renderGrid() {
+            const grid = document.getElementById('gridView');
+            
+            if (locations.length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><h3>No locations yet</h3><p>Click "Add Location" to get started</p></div>';
+                return;
+            }
+            
+            grid.innerHTML = locations.map(loc => `
+                <div class="location-card">
+                    <h3 style="margin-bottom: 10px;">${loc.name}</h3>
+                    <p style="color: #718096; font-size: 14px; margin-bottom: 8px;">📍 ${loc.address}</p>
+                    ${loc.phone ? `<p style="color: #718096; font-size: 14px; margin-bottom: 8px;">📞 ${loc.phone}</p>` : ''}
+                    ${loc.cost ? `<p style="color: #48bb78; font-size: 14px; margin-bottom: 8px; font-weight: 600;">💵 $${parseFloat(loc.cost).toFixed(2)}</p>` : ''}
+                    ${loc.availability !== undefined && loc.availability !== null ? `<p style="color: #667eea; font-size: 14px; margin-bottom: 8px;">📦 ${loc.availability} available</p>` : ''}
+                    ${loc.link ? `<p style="color: #718096; font-size: 14px; margin-bottom: 8px;">💳 ${loc.link}</p>` : ''}
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <span class="counter-badge">Visits: ${loc.counter || 0}</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon btn-edit" onclick="editLocation('${loc.id}')">✏️</button>
+                            <button class="btn-icon btn-delete" onclick="deleteLocation('${loc.id}')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Set view mode
+        function setView(view) {
+            currentView = view;
+            
+            // Update buttons
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide views
+            document.getElementById('tableView').style.display = view === 'table' ? 'block' : 'none';
+            document.getElementById('gridView').style.display = view === 'grid' ? 'block' : 'none';
+            document.getElementById('qrView').style.display = 'none';
+            
+            renderLocations();
+        }
+
+        // Search locations
+        function searchLocations() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = locations.filter(loc => 
+                loc.name.toLowerCase().includes(query) ||
+                loc.address.toLowerCase().includes(query) ||
+                (loc.phone && loc.phone.toLowerCase().includes(query)) ||
+                (loc.number && loc.number.toLowerCase().includes(query))
+            );
+            
+            // Temporarily replace locations for rendering
+            const temp = locations;
+            locations = filtered;
+            renderLocations();
+            locations = temp;
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Add Location';
+            document.getElementById('modalName').value = '';
+            document.getElementById('modalNumber').value = '';
+            document.getElementById('modalAddress').value = '';
+            document.getElementById('modalPhone').value = '';
+            document.getElementById('modalCost').value = '';
+            document.getElementById('modalAvailability').value = '';
+            document.getElementById('modalLink').value = '';
+            document.getElementById('modalCoords').value = '';
+            document.getElementById('locationModal').classList.add('active');
+        }
+
+        // Edit location
+        function editLocation(id) {
+            const loc = locations.find(l => l.id === id);
+            if (!loc) return;
+            
+            editingId = id;
+            document.getElementById('modalTitle').textContent = 'Edit Location';
+            document.getElementById('modalName').value = loc.name;
+            document.getElementById('modalNumber').value = loc.number || '';
+            document.getElementById('modalAddress').value = loc.address;
+            document.getElementById('modalPhone').value = loc.phone || '';
+            document.getElementById('modalCost').value = loc.cost || '';
+            document.getElementById('modalAvailability').value = loc.availability !== undefined && loc.availability !== null ? loc.availability : '';
+            document.getElementById('modalLink').value = loc.link || '';
+            document.getElementById('modalCoords').value = loc.coordinates ? 
+                `${loc.coordinates.lat},${loc.coordinates.lng}` : '';
+            document.getElementById('locationModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('locationModal').classList.remove('active');
+            editingId = null;
+        }
+
+        // Save location
+        function saveLocation() {
+            const name = document.getElementById('modalName').value.trim();
+            const number = document.getElementById('modalNumber').value.trim();
+            const address = document.getElementById('modalAddress').value.trim();
+            const phone = document.getElementById('modalPhone').value.trim();
+            const cost = document.getElementById('modalCost').value.trim();
+            const availability = document.getElementById('modalAvailability').value.trim();
+            const link = document.getElementById('modalLink').value.trim();
+            const coords = document.getElementById('modalCoords').value.trim();
             
             if (!name || !address) {
-                alert('Please enter name and address');
+                alert('Name and address are required');
                 return;
             }
             
-            var item = {
-                id: 'L' + Date.now(),
-                name: name,
-                address: address,
-                number: document.getElementById('number').value,
-                phone: document.getElementById('phone').value,
-                link: document.getElementById('link').value,
-                counter: 0
-            };
-            
-            data.push(item);
-            saveData();
-            showList();
-            clearAll();
-            alert('Location added!');
-        }
-        
-        function clearAll() {
-            document.getElementById('name').value = '';
-            document.getElementById('address').value = '';
-            document.getElementById('number').value = '';
-            document.getElementById('phone').value = '';
-            document.getElementById('link').value = '';
-        }
-        
-        function showList() {
-            var html = '';
-            
-            if (data.length === 0) {
-                html = '<p>No locations yet</p>';
-            } else {
-                for (var i = 0; i < data.length; i++) {
-                    var loc = data[i];
-                    html += '<div class="location-box">';
-                    html += '<h3>' + loc.name + '</h3>';
-                    html += '<p>Address: ' + loc.address + '</p>';
-                    
-                    if (loc.number) {
-                        html += '<p>ID: ' + loc.number + '</p>';
-                    }
-                    if (loc.phone) {
-                        html += '<p>Phone: ' + loc.phone + '</p>';
-                    }
-                    if (loc.link) {
-                        html += '<p>Venmo: ' + loc.link + '</p>';
-                    }
-                    
-                    html += '<p>Visits: ' + loc.counter + '</p>';
-                    html += '<button class="delete-btn" onclick="deleteItem(' + i + ')">Delete</button>';
-                    html += '</div>';
+            let coordinates = null;
+            if (coords && coords.includes(',')) {
+                const parts = coords.split(',');
+                const lat = parseFloat(parts[0].trim());
+                const lng = parseFloat(parts[1].trim());
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    coordinates = { lat, lng };
                 }
             }
             
-            document.getElementById('list').innerHTML = html;
+            const location = {
+                id: editingId || 'loc_' + Date.now(),
+                name,
+                number,
+                address,
+                phone,
+                cost: cost ? parseFloat(cost) : null,
+                availability: availability ? parseInt(availability) : null,
+                link,
+                coordinates,
+                counter: editingId ? locations.find(l => l.id === editingId).counter : 0
+            };
+            
+            if (editingId) {
+                locations = locations.map(l => l.id === editingId ? location : l);
+            } else {
+                locations.push(location);
+            }
+            
+            saveToStorage();
+            renderLocations();
+            closeModal();
         }
-        
-        function deleteItem(index) {
+
+        // Delete location
+        function deleteLocation(id) {
             if (confirm('Delete this location?')) {
-                data.splice(index, 1);
-                saveData();
-                showList();
+                locations = locations.filter(l => l.id !== id);
+                saveToStorage();
+                renderLocations();
             }
         }
-        
-        function showDashboard() {
-            document.getElementById('dashboard').className = 'tab-content active';
-            document.getElementById('qrtab').className = 'tab-content';
+
+        // Reset counter
+        function resetCounter(id) {
+            if (confirm('Reset visit counter to 0?')) {
+                locations = locations.map(l => {
+                    if (l.id === id) {
+                        l.counter = 0;
+                    }
+                    return l;
+                });
+                saveToStorage();
+                renderLocations();
+            }
         }
-        
-        function showQR() {
-            document.getElementById('dashboard').className = 'tab-content';
-            document.getElementById('qrtab').className = 'tab-content active';
-            makeQR();
-        }
-        
-        function makeQR() {
-            var qrDiv = document.getElementById('qrcode');
-            qrDiv.innerHTML = '';
+
+		// Show QR code
+        function showQRCode() {
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('gridView').style.display = 'none';
+            document.getElementById('qrView').style.display = 'block';
             
-            if (data.length === 0) {
-                qrDiv.innerHTML = '<p>Add locations first</p>';
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            if (locations.length === 0) {
+                qrContainer.innerHTML = '<p style="color: #718096;">Add locations first to generate QR code</p>';
                 return;
             }
             
-            var url = SITE_URL + '#' + encodeURIComponent(JSON.stringify(data));
+            // Encode locations in URL hash for sharing
+            const locationsData = encodeURIComponent(JSON.stringify(locations));
+            const url = SITE_URL + '#' + locationsData;
             
-            new QRCode(qrDiv, {
-                text: url,
-                width: 256,
-                height: 256
+            console.log('Generating QR for URL with', locations.length, 'locations');
+            
+            // Check if URL is too long for QR code (generally safe up to ~2000 chars)
+            if (url.length > 2000) {
+                // If too many locations, just include essential data
+                const simplifiedLocations = locations.map(loc => ({
+                    id: loc.id,
+                    name: loc.name,
+                    address: loc.address,
+                    phone: loc.phone,
+                    link: loc.link,
+                    coordinates: loc.coordinates,
+                    number: loc.number
+                }));
+                const simplifiedUrl = SITE_URL + '#' + encodeURIComponent(JSON.stringify(simplifiedLocations));
+                
+                if (simplifiedUrl.length > 2000) {
+                    qrContainer.innerHTML = '<p style="color: #f56565;">Too many locations for QR code. Consider reducing the number of locations or using the export/import feature instead.</p>';
+                    return;
+                }
+                
+                url = simplifiedUrl;
+            }
+            
+            try {
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 256,
+                    height: 256,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+                
+                // Show info below QR code
+                const urlDisplay = document.createElement('div');
+                urlDisplay.style.cssText = 'margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; font-size: 12px; color: #4a5568;';
+                urlDisplay.innerHTML = '<strong>QR Code Ready!</strong><br><br>' +
+                    'This QR code contains ' + locations.length + ' location(s).<br>' +
+                    'Anyone who scans this will see these locations on their map.<br><br>' +
+                    '<small>Note: QR codes work best with up to 10-15 locations. For more locations, use the Export feature.</small>';
+                qrContainer.appendChild(urlDisplay);
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                qrContainer.innerHTML = '<p style="color: #f56565;">Error generating QR code. Please try again.</p>';
+            }
+        }
+
+        // Toggle export menu
+        function toggleExportMenu() {
+            const menu = document.getElementById('exportMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Close export menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.action-buttons')) {
+                document.getElementById('exportMenu').style.display = 'none';
+            }
+        });
+
+        // Export as Excel
+        function exportExcel() {
+            const ws_data = [
+                ['ID', 'Name', 'Address', 'Phone', 'Cost', 'Availability', 'Venmo', 'Latitude', 'Longitude', 'Visits']
+            ];
+            
+            locations.forEach(loc => {
+                ws_data.push([
+                    loc.number || loc.id || '',
+                    loc.name,
+                    loc.address,
+                    loc.phone || '',
+                    loc.cost || '',
+                    loc.availability !== undefined && loc.availability !== null ? loc.availability : '',
+                    loc.link || '',
+                    loc.coordinates ? loc.coordinates.lat : '',
+                    loc.coordinates ? loc.coordinates.lng : '',
+                    loc.counter || 0
+                ]);
             });
             
-            document.getElementById('url-display').innerHTML = '<strong>URL:</strong><br>' + url;
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            
+            // Set column widths
+            ws['!cols'] = [
+                {wch: 10}, // ID
+                {wch: 20}, // Name
+                {wch: 35}, // Address
+                {wch: 15}, // Phone
+                {wch: 10}, // Cost
+                {wch: 12}, // Availability
+                {wch: 15}, // Venmo
+                {wch: 12}, // Latitude
+                {wch: 12}, // Longitude
+                {wch: 8}   // Visits
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, "Locations");
+            XLSX.writeFile(wb, `locations_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            document.getElementById('exportMenu').style.display = 'none';
         }
-        
-        // Load on start
-        loadData();
+
+        // Export as CSV
+        function exportCSV() {
+            let csv = 'ID,Name,Address,Phone,Cost,Availability,Venmo,Latitude,Longitude,Visits\n';
+            
+            locations.forEach(loc => {
+                csv += `"${loc.number || loc.id || ''}",`;
+                csv += `"${loc.name}",`;
+                csv += `"${loc.address}",`;
+                csv += `"${loc.phone || ''}",`;
+                csv += `"${loc.cost || ''}",`;
+                csv += `"${loc.availability !== undefined && loc.availability !== null ? loc.availability : ''}",`;
+                csv += `"${loc.link || ''}",`;
+                csv += `"${loc.coordinates ? loc.coordinates.lat : ''}",`;
+                csv += `"${loc.coordinates ? loc.coordinates.lng : ''}",`;
+                csv += `"${loc.counter || 0}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `locations_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+            
+            document.getElementById('exportMenu').style.display = 'none';
+        }
+
+        // Export as JSON
+        function exportJSON() {
+            const dataStr = JSON.stringify(locations, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+            const link = document.createElement('a');
+            link.setAttribute('href', dataUri);
+            link.setAttribute('download', `locations_${new Date().toISOString().split('T')[0]}.json`);
+            link.click();
+            
+            document.getElementById('exportMenu').style.display = 'none';
+        }
+
+        // Handle import
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.json')) {
+                importJSON(file);
+            } else if (fileName.endsWith('.csv')) {
+                importCSV(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                importExcel(file);
+            } else {
+                alert('Please upload a JSON, CSV, or Excel file');
+            }
+            
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Import JSON
+        function importJSON(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        if (confirm(`Import ${imported.length} locations? This will replace existing data.`)) {
+                            locations = imported;
+                            saveToStorage();
+                            renderLocations();
+                            alert(`Successfully imported ${imported.length} locations`);
+                        }
+                    } else {
+                        alert('Invalid JSON format');
+                    }
+                } catch (err) {
+                    alert('Error reading JSON file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Import CSV
+        function importCSV(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const rows = text.split('\n').filter(row => row.trim());
+                    
+                    const imported = [];
+                    for (let i = 1; i < rows.length; i++) {
+                        const values = parseCSVLine(rows[i]);
+                        if (values.length >= 3) {
+                            const loc = {
+                                id: values[0] || 'loc_' + Date.now() + '_' + i,
+                                number: values[0] || '',
+                                name: values[1] || '',
+                                address: values[2] || '',
+                                phone: values[3] || '',
+                                cost: values[4] ? parseFloat(values[4]) : null,
+                                availability: values[5] ? parseInt(values[5]) : null,
+                                link: values[6] || '',
+                                coordinates: (values[7] && values[8]) ? {
+                                    lat: parseFloat(values[7]),
+                                    lng: parseFloat(values[8])
+                                } : null,
+                                counter: parseInt(values[9]) || 0
+                            };
+                            
+                            if (loc.name && loc.address) {
+                                imported.push(loc);
+                            }
+                        }
+                    }
+                    
+                    if (imported.length > 0) {
+                        if (confirm(`Import ${imported.length} locations? This will replace existing data.`)) {
+                            locations = imported;
+                            saveToStorage();
+                            renderLocations();
+                            alert(`Successfully imported ${imported.length} locations`);
+                        }
+                    } else {
+                        alert('No valid locations found in CSV');
+                    }
+                } catch (err) {
+                    alert('Error reading CSV file');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Parse CSV line handling quotes
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result.map(val => val.replace(/^"|"$/g, ''));
+        }
+
+        // Import Excel
+        function importExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    const imported = [];
+                    jsonData.forEach((row, index) => {
+                        const loc = {
+                            id: row.ID || row.id || 'loc_' + Date.now() + '_' + index,
+                            number: row.ID || row.id || '',
+                            name: row.Name || row.name || '',
+                            address: row.Address || row.address || '',
+                            phone: row.Phone || row.phone || '',
+                            cost: row.Cost !== undefined && row.Cost !== null ? parseFloat(row.Cost) : null,
+                            availability: row.Availability !== undefined && row.Availability !== null ? parseInt(row.Availability) : null,
+                            link: row.Venmo || row.venmo || row.link || '',
+                            coordinates: (row.Latitude && row.Longitude) ? {
+                                lat: parseFloat(row.Latitude),
+                                lng: parseFloat(row.Longitude)
+                            } : null,
+                            counter: parseInt(row.Visits || row.visits || row.counter) || 0
+                        };
+                        
+                        if (loc.name && loc.address) {
+                            imported.push(loc);
+                        }
+                    });
+                    
+                    if (imported.length > 0) {
+                        if (confirm(`Import ${imported.length} locations? This will replace existing data.`)) {
+                            locations = imported;
+                            saveToStorage();
+                            renderLocations();
+                            alert(`Successfully imported ${imported.length} locations`);
+                        }
+                    } else {
+                        alert('No valid locations found in Excel file');
+                    }
+                } catch (err) {
+                    alert('Error reading Excel file. Make sure the file has the correct format.');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Initialize on load
+        window.onload = init;
     </script>
 </body>
 </html>
