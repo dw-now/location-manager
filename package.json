@@ -1,11 +1,28 @@
 {
   "name": "location-manager",
   "version": "1.0.0",
-  "description": "Secure location manager with Google Maps",
+  "description": "Location manager with QR code sharing",
   "scripts": {
-    "build": "echo 'No build required'"
+    "build": "echo 'No build needed'",
+    "dev": "netlify dev"
   },
   "dependencies": {
-    "@netlify/functions": "^2.0.0"
-  }
+    "@netlify/blobs": "^7.4.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.5.0"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dw-now/location-manager.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/dw-now/location-manager/issues"
+  },
+  "homepage": "https://github.com/dw-now/location-manager#readme"
 }

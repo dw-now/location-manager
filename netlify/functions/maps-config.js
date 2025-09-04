@@ -1,3 +1,6 @@
+// netlify/functions/maps-config.js
+// This function provides the Google Maps API key to your frontend
+
 exports.handler = async (event, context) => {
   // Only allow GET requests
   if (event.httpMethod !== 'GET') {
@@ -7,24 +10,31 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Get API key from environment variable
+  // Check if API key is configured
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-
+  
   if (!apiKey) {
+    console.error('GOOGLE_MAPS_API_KEY is not configured in environment variables');
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'API key not configured' })
+      body: JSON.stringify({ 
+        error: 'Maps API key not configured',
+        message: 'Please set GOOGLE_MAPS_API_KEY in Netlify environment variables'
+      })
     };
   }
 
-  // Return API key (only to your domain due to CORS)
+  // Return the API key
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*', // Restrict this to your domain in production
-      'Cache-Control': 'private, max-age=3600'
+      // CORS headers if needed
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type'
     },
-    body: JSON.stringify({ apiKey })
+    body: JSON.stringify({
+      apiKey: apiKey
+    })
   };
 };

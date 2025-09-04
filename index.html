@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Map</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .location-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            max-height: 40vh;
+            overflow-y: auto;
+            transform: translateY(calc(100% - 60px));
+            transition: transform 0.3s ease;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .location-panel.expanded {
+            transform: translateY(0);
+        }
+
+        .panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-toggle {
+            font-size: 24px;
+            transition: transform 0.3s;
+        }
+
+        .location-panel.expanded .panel-toggle {
+            transform: rotate(180deg);
+        }
+
+        .locations-container {
+            padding: 10px;
+        }
+
+        .location-card {
+            background: #f7f9fc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .location-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .location-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #FFD700;
+            border: 2px solid white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 26px;
+            font-weight: bold;
+            color: #333;
+            margin-right: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .location-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .location-address {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .location-distance {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .location-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            color: white;
+        }
+
+        .btn-navigate {
+            background: #48bb78;
+        }
+
+        .btn-venmo {
+            background: #3d95ce;
+        }
+
+        .payment-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            animation: fadeIn 0.3s;
+        }
+
+        .payment-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .payment-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            padding: 30px;
+            text-align: center;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .payment-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .payment-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 10px;
+        }
+
+        .payment-location {
+            font-size: 18px;
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .payment-address {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .payment-distance {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .payment-availability {
+            font-size: 16px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .payment-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-payment {
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            transition: all 0.3s;
+        }
+
+        .btn-payment-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-payment-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-payment-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .close-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .location-actions {
+                flex-direction: column;
+            }
+            .payment-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Getting your location...</p>
+        </div>
+    </div>
+
+    <div class="location-panel" id="locationPanel" style="display: none;">
+        <div class="panel-header" onclick="togglePanel()">
+            <h2>📍 <span id="locationCount">0</span> Locations Nearby</h2>
+            <span class="panel-toggle">⬆</span>
+        </div>
+        <div class="locations-container" id="locationsContainer">
+            <!-- Locations will be added here -->
+        </div>
+    </div>
+
+    <!-- Payment Overlay -->
+    <div id="paymentOverlay" class="payment-overlay">
+        <button class="close-overlay" onclick="closePaymentOverlay()">&times;</button>
+        <div class="payment-content">
+            <div class="payment-icon">💳</div>
+            <h2 class="payment-title">You've Arrived!</h2>
+            <div class="payment-location" id="overlayLocationName"></div>
+            <div class="payment-address" id="overlayLocationAddress"></div>
+            <div class="payment-distance" id="overlayDistance"></div>
+            <div class="payment-availability" id="overlayAvailability"></div>
+            <div class="payment-actions">
+                <a href="#" id="overlayVenmoBtn" class="btn-payment btn-payment-primary">
+                    Pay with Venmo
+                </a>
+                <button class="btn-payment btn-payment-secondary" onclick="closePaymentOverlay()">
+                    Not Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let markers = [];
+        let userMarker;
+        let infoWindow;
+        let locations = [];
+        let nearbyLocations = [];
+        let userPosition = null;
+        const RADIUS_MILES = 3;
+        const METERS_PER_MILE = 1609.34;
+        const RADIUS_METERS = RADIUS_MILES * METERS_PER_MILE;
+        const PROXIMITY_THRESHOLD_FEET = 100;
+        let watchPositionId = null;
+        let overlayShownForLocations = new Set(); // Track which locations have shown overlay
+
+// Replace the loadLocations function in index.html with this updated version
+// that fetches from the backend share function for cross-device compatibility
+
+	function loadLocations() {
+    // First check for share parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareCode = urlParams.get('share');
+    
+    if (shareCode) {
+        // Try to load from backend first
+        fetch(`/.netlify/functions/share?code=${shareCode}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.locations) {
+                    locations = data.locations;
+                    console.log('Loaded from share server:', shareCode, '-', locations.length, 'locations');
+                    
+                    // Continue with map initialization after loading
+                    if (typeof continueMapInit === 'function') {
+                        continueMapInit();
+                    }
+                } else {
+                    throw new Error('No locations in response');
+                }
+            })
+            .catch(error => {
+                console.error('Failed to load from server, trying localStorage:', error);
+                
+                // Fallback to localStorage
+                const shareData = localStorage.getItem('share_' + shareCode);
+                if (shareData) {
+                    try {
+                        const data = JSON.parse(shareData);
+                        locations = data.locations;
+                        console.log('Loaded from localStorage share:', shareCode, '-', locations.length, 'locations');
+                    } catch (e) {
+                        console.error('Failed to parse shared locations from localStorage');
+                    }
+                }
+            });
+        
+        // Don't continue with other loading methods if we have a share code
+        return;
+    }
+    
+    // Fallback to hash if no share parameter
+    if (locations.length === 0) {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            try {
+                locations = JSON.parse(decodeURIComponent(hash));
+                console.log('Loaded from URL hash:', locations.length, 'locations');
+            } catch (e) {
+                console.error('Failed to parse locations from URL');
+            }
+        }
+    }
+    
+    // Fallback to regular localStorage
+    if (locations.length === 0) {
+        const stored = localStorage.getItem('locations');
+        if (stored) {
+            try {
+                locations = JSON.parse(stored);
+                console.log('Loaded from localStorage:', locations.length, 'locations');
+            } catch (e) {
+                console.error('Failed to parse locations from localStorage');
+                locations = [];
+            }
+        } else {
+            console.log('No locations found');
+        }
+    }
+    
+    console.log('Total locations loaded:', locations.length);
+}
+
+        // Calculate distance between two points in miles
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Filter locations within radius
+        function filterNearbyLocations(userLat, userLng) {
+            nearbyLocations = [];
+            
+            console.log('Filtering locations. Total locations:', locations.length);
+            console.log('User position:', userLat, userLng);
+            
+            for (let i = 0; i < locations.length; i++) {
+                const loc = locations[i];
+                
+                // Skip locations with zero availability
+                if (loc.availability !== undefined && loc.availability !== null && loc.availability <= 0) {
+                    console.log('Skipping', loc.name, '- out of stock');
+                    continue;
+                }
+                
+                if (loc.coordinates) {
+                    const distance = calculateDistance(userLat, userLng, loc.coordinates.lat, loc.coordinates.lng);
+                    console.log('Location', loc.name, 'distance:', distance, 'miles, availability:', loc.availability);
+                    
+                    if (distance <= RADIUS_MILES) {
+                        loc.distance = distance;
+                        nearbyLocations.push(loc);
+                    }
+                } else if (loc.address) {
+                    // If no coordinates but has address, we should geocode it
+                    console.log('Location', loc.name, 'needs geocoding');
+                    geocodeAddress(loc);
+                }
+            }
+            
+            nearbyLocations.sort((a, b) => a.distance - b.distance);
+            document.getElementById('locationCount').textContent = nearbyLocations.length;
+            console.log('Found', nearbyLocations.length, 'nearby locations within', RADIUS_MILES, 'miles');
+            return nearbyLocations;
+        }
+        
+        // Geocode address to get coordinates
+        function geocodeAddress(location) {
+            if (!location.address) return;
+            
+            // Skip if out of stock
+            if (location.availability !== undefined && location.availability !== null && location.availability <= 0) {
+                return;
+            }
+            
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: location.address }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    location.coordinates = {
+                        lat: results[0].geometry.location.lat(),
+                        lng: results[0].geometry.location.lng()
+                    };
+                    
+                    // Recalculate distance and add if within radius
+                    if (userPosition) {
+                        const distance = calculateDistance(
+                            userPosition.lat, userPosition.lng,
+                            location.coordinates.lat, location.coordinates.lng
+                        );
+                        
+                        if (distance <= RADIUS_MILES) {
+                            location.distance = distance;
+                            nearbyLocations.push(location);
+                            nearbyLocations.sort((a, b) => a.distance - b.distance);
+                            
+                            // Add marker
+                            addMarker(location, nearbyLocations.indexOf(location));
+                            
+                            // Re-render cards
+                            renderLocationCards(nearbyLocations);
+                            
+                            // Update count
+                            document.getElementById('locationCount').textContent = nearbyLocations.length;
+                        }
+                    }
+                } else {
+                    console.error('Geocoding failed for', location.address, ':', status);
+                }
+            });
+        }
+
+        // Check proximity to locations
+        function checkProximity() {
+            if (!userPosition || !nearbyLocations.length) return;
+            
+            for (let location of nearbyLocations) {
+                if (location.coordinates) {
+                    const distance = calculateDistance(
+                        userPosition.lat, userPosition.lng,
+                        location.coordinates.lat, location.coordinates.lng
+                    );
+                    const distanceFeet = distance * 5280;
+                    
+                    // Check if within 100 feet and haven't shown overlay for this location yet
+                    if (distanceFeet <= PROXIMITY_THRESHOLD_FEET && !overlayShownForLocations.has(location.id)) {
+                        showPaymentOverlay(location, distanceFeet);
+                        overlayShownForLocations.add(location.id);
+                        break; // Only show one overlay at a time
+                    }
+                }
+            }
+        }
+
+        // Show payment overlay
+        function showPaymentOverlay(location, distanceFeet) {
+            const overlay = document.getElementById('paymentOverlay');
+            const venmoLink = location.link ? 
+                `venmo://paycharge?txn=pay&recipients=${location.link}&note=${encodeURIComponent(location.address)}` : 
+                'venmo://paycharge?txn=pay&note=' + encodeURIComponent(location.address);
+            
+            document.getElementById('overlayLocationName').textContent = location.name;
+            document.getElementById('overlayLocationAddress').textContent = '📍 ' + location.address;
+            document.getElementById('overlayDistance').textContent = `${Math.round(distanceFeet)} feet away`;
+            
+            if (location.availability !== undefined && location.availability !== null) {
+                document.getElementById('overlayAvailability').textContent = `📦 ${location.availability} available`;
+                document.getElementById('overlayAvailability').style.display = 'block';
+            } else {
+                document.getElementById('overlayAvailability').style.display = 'none';
+            }
+            
+            document.getElementById('overlayVenmoBtn').href = venmoLink;
+            overlay.classList.add('active');
+            
+            // Vibrate if supported
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            // Play a subtle sound if you want (optional)
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRhIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoAAAAAAAEA');
+                audio.play();
+            } catch (e) {}
+        }
+
+        // Close payment overlay
+        function closePaymentOverlay() {
+            document.getElementById('paymentOverlay').classList.remove('active');
+        }
+
+        // Start watching position for proximity
+        function startProximityTracking() {
+            if (navigator.geolocation && !watchPositionId) {
+                watchPositionId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        userPosition = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        // Update user marker position
+                        if (userMarker) {
+                            userMarker.setPosition(new google.maps.LatLng(userPosition.lat, userPosition.lng));
+                        }
+                        
+                        // Check proximity to locations
+                        checkProximity();
+                    },
+                    (error) => {
+                        console.error('Position tracking error:', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            }
+        }
+
+        // Initialize map
+        function initMap() {
+            loadLocations();
+            
+            const defaultCenter = { lat: 34.0522, lng: -118.2437 };
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: defaultCenter,
+                mapTypeControl: false,
+                fullscreenControl: false,
+                streetViewControl: false
+            });
+            
+            infoWindow = new google.maps.InfoWindow();
+            
+            getUserLocation();
+        }
+
+        // Get user's current location
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userPosition = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        map.setCenter(userPosition);
+                        
+                        // Add user marker
+                        userMarker = new google.maps.Marker({
+                            position: userPosition,
+                            map: map,
+                            title: 'Your Location',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                fillColor: '#4285F4',
+                                fillOpacity: 1,
+                                strokeColor: '#ffffff',
+                                strokeWeight: 2,
+                                scale: 8
+                            },
+                            zIndex: 1000
+                        });
+                        
+                        // Filter and display nearby locations
+                        const nearby = filterNearbyLocations(userPosition.lat, userPosition.lng);
+                        
+                        if (nearby.length > 0) {
+                            displayNearbyLocations(nearby);
+                            setOptimalZoom(nearby);
+                        }
+                        
+                        // Hide loading and show panel
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) {
+                            loadingEl.style.display = 'none';
+                        }
+                        const panelEl = document.getElementById('locationPanel');
+                        if (panelEl) {
+                            panelEl.style.display = 'block';
+                        }
+                        
+                        // Start tracking for proximity alerts
+                        startProximityTracking();
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) {
+                            loadingEl.innerHTML = '<p>Please enable location access</p>';
+                        }
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.innerHTML = '<p>Geolocation not supported</p>';
+                }
+            }
+        }
+
+        // Set optimal zoom based on location distribution
+        function setOptimalZoom(nearbyLocs) {
+            if (!userPosition || nearbyLocs.length === 0) {
+                map.setZoom(15);
+                return;
+            }
+            
+            let within1Mile = 0;
+            nearbyLocs.forEach(loc => {
+                if (loc.distance <= 1.0) within1Mile++;
+            });
+            
+            let targetZoom = 15;
+            if (within1Mile >= 2) {
+                targetZoom = 15;
+            } else if (nearbyLocs.length >= 2) {
+                targetZoom = 14;
+            } else if (nearbyLocs.length === 1) {
+                if (nearbyLocs[0].distance < 1) {
+                    targetZoom = 15;
+                } else {
+                    targetZoom = 14;
+                }
+            }
+            
+            map.setZoom(targetZoom);
+        }
+
+        // Display nearby locations on map
+        function displayNearbyLocations(nearbyLocs) {
+            nearbyLocs.forEach((location, index) => {
+                if (location.coordinates) {
+                    addMarker(location, index);
+                }
+            });
+            
+            renderLocationCards(nearbyLocs);
+        }
+
+        // Create custom marker icon
+        function createMarkerIcon(number) {
+            const svg = 
+                '<svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">' +
+                '<path d="M20 2 C10 2, 2 10, 2 20 C2 25, 5 30, 20 48 C35 30, 38 25, 38 20 C38 10, 30 2, 20 2 Z" fill="#FFD700" stroke="white" stroke-width="2"/>' +
+                '<circle cx="20" cy="20" r="12" fill="white"/>' +
+                '<text x="20" y="26" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">' + number + '</text>' +
+                '</svg>';
+            
+            return {
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                scaledSize: new google.maps.Size(40, 50),
+                anchor: new google.maps.Point(20, 50)
+            };
+        }
+
+        // Add marker to map
+        function addMarker(location, index) {
+            const markerNumber = location.number || (index + 1).toString();
+            const position = new google.maps.LatLng(location.coordinates.lat, location.coordinates.lng);
+            
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                icon: createMarkerIcon(markerNumber),
+                title: location.name,
+                animation: google.maps.Animation.DROP
+            });
+            
+            marker.addListener('click', () => {
+                showInfoWindow(marker, location);
+            });
+            
+            location.marker = marker;
+            markers.push(marker);
+        }
+
+        // Show info window
+        function showInfoWindow(marker, location) {
+            const venmoLink = location.link || 'venmo://paycharge?txn=pay&note=' + encodeURIComponent(location.address);
+            const mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(location.address);
+            
+            const content = 
+                '<div style="padding: 10px; max-width: 250px;">' +
+                '<h3 style="margin-bottom: 8px;">' + location.name + '</h3>' +
+                '<p style="margin-bottom: 5px;">📍 ' + location.address + '</p>' +
+                (location.phone ? '<p style="margin-bottom: 10px;">📞 ' + location.phone + '</p>' : '') +
+                '<div style="display: flex; gap: 8px;">' +
+                '<a href="' + mapsUrl + '" target="_blank" style="flex: 1; padding: 8px; background: #48bb78; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Navigate</a>' +
+                '<a href="' + venmoLink + '" style="flex: 1; padding: 8px; background: #3d95ce; color: white; text-decoration: none; border-radius: 6px; text-align: center;">Venmo</a>' +
+                '</div>' +
+                '</div>';
+            
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+        }
+
+        // Render location cards
+        function renderLocationCards(locs) {
+            const container = document.getElementById('locationsContainer');
+            container.innerHTML = '';
+            
+            locs.forEach((location, index) => {
+                const markerNumber = location.number || (index + 1).toString();
+                const venmoLink = location.link || 'venmo://paycharge?txn=pay&note=' + encodeURIComponent(location.address);
+                const mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(location.address);
+                
+                const card = document.createElement('div');
+                card.className = 'location-card';
+                
+                const distanceText = location.distance ? 
+                    (location.distance < 1 ? 
+                        (location.distance * 5280).toFixed(0) + ' ft' : 
+                        location.distance.toFixed(1) + ' mi') : '';
+                
+                const availabilityText = location.availability !== undefined && location.availability !== null ?
+                    ` | ${location.availability} available` : '';
+                
+                card.innerHTML = 
+                    '<div style="display: flex; align-items: flex-start;">' +
+                    '<span class="location-number">' + markerNumber + '</span>' +
+                    '<div style="flex: 1;">' +
+                    '<div class="location-name">' + location.name + '</div>' +
+                    '<div class="location-address">' + location.address + '</div>' +
+                    (location.phone ? '<div style="color: #718096; font-size: 14px; margin-top: 4px;">📞 ' + location.phone + '</div>' : '') +
+                    (availabilityText ? '<div style="color: #48bb78; font-size: 14px; margin-top: 4px; font-weight: 600;">📦' + availabilityText + '</div>' : '') +
+                    '</div>' +
+                    (distanceText ? '<span class="location-distance">' + distanceText + '</span>' : '') +
+                    '</div>' +
+                    '<div class="location-actions">' +
+                    '<a href="' + mapsUrl + '" target="_blank" class="btn btn-navigate">🗺️ Navigate</a>' +
+                    '<a href="' + venmoLink + '" class="btn btn-venmo">💳 Venmo</a>' +
+                    '</div>';
+                
+                card.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('btn')) {
+                        if (location.marker) {
+                            map.setCenter(location.marker.getPosition());
+                            map.setZoom(16);
+                            showInfoWindow(location.marker, location);
+                        }
+                    }
+                });
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Toggle panel
+        function togglePanel() {
+            document.getElementById('locationPanel').classList.toggle('expanded');
+        }
+
+        // Load Google Maps API
+        async function loadGoogleMapsAPI() {
+            try {
+                const response = await fetch('/.netlify/functions/maps-config');
+                const data = await response.json();
+                
+                if (data.apiKey) {
+                    const script = document.createElement('script');
+                    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + data.apiKey + '&callback=initMap&loading=async';
+                    script.async = true;
+                    script.defer = true;
+                    document.head.appendChild(script);
+                } else {
+                    throw new Error('No API key available');
+                }
+            } catch (error) {
+                console.error('Error loading maps:', error);
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.innerHTML = '<p>Error loading map. Please try again.</p>';
+                }
+            }
+        }
+
+        // Start the app
+        loadGoogleMapsAPI();
+    </script>
+</body>
+</html>

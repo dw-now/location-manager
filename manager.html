@@ -658,7 +658,12 @@
                     <td>${loc.address}</td>
                     <td>${loc.phone || '-'}</td>
                     <td>${loc.cost ? '$' + parseFloat(loc.cost).toFixed(2) : '-'}</td>
-                    <td>${loc.availability !== undefined && loc.availability !== null ? loc.availability : '-'}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="${loc.availability === 0 ? 'color: #f56565; font-weight: 600;' : ''}">${loc.availability !== undefined && loc.availability !== null ? loc.availability : '-'}</span>
+                            ${loc.availability > 0 ? `<button class="btn-icon" style="background: #f56565; color: white; padding: 4px 8px; font-size: 11px;" onclick="decrementAvailability('${loc.id}')">-1</button>` : ''}
+                        </div>
+                    </td>
                     <td>${loc.link || '-'}</td>
                     <td>${loc.coordinates ? `${loc.coordinates.lat.toFixed(4)}, ${loc.coordinates.lng.toFixed(4)}` : '-'}</td>
                     <td><span class="counter-badge">${loc.counter || 0}</span></td>
@@ -686,11 +691,12 @@
                     <p style="color: #718096; font-size: 14px; margin-bottom: 8px;">📍 ${loc.address}</p>
                     ${loc.phone ? `<p style="color: #718096; font-size: 14px; margin-bottom: 8px;">📞 ${loc.phone}</p>` : ''}
                     ${loc.cost ? `<p style="color: #48bb78; font-size: 14px; margin-bottom: 8px; font-weight: 600;">💵 $${parseFloat(loc.cost).toFixed(2)}</p>` : ''}
-                    ${loc.availability !== undefined && loc.availability !== null ? `<p style="color: #667eea; font-size: 14px; margin-bottom: 8px;">📦 ${loc.availability} available</p>` : ''}
+                    ${loc.availability !== undefined && loc.availability !== null ? `<p style="color: ${loc.availability === 0 ? '#f56565' : '#667eea'}; font-size: 14px; margin-bottom: 8px;">📦 ${loc.availability} available</p>` : ''}
                     ${loc.link ? `<p style="color: #718096; font-size: 14px; margin-bottom: 8px;">💳 ${loc.link}</p>` : ''}
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                         <span class="counter-badge">Visits: ${loc.counter || 0}</span>
                         <div style="display: flex; gap: 8px;">
+                            ${loc.availability > 0 ? `<button class="btn-icon" style="background: #f56565; color: white;" onclick="decrementAvailability('${loc.id}')">-1</button>` : ''}
                             <button class="btn-icon btn-edit" onclick="editLocation('${loc.id}')">✏️</button>
                             <button class="btn-icon btn-delete" onclick="deleteLocation('${loc.id}')">🗑️</button>
                         </div>
@@ -833,6 +839,21 @@
             }
         }
 
+        // Decrement availability
+        function decrementAvailability(id) {
+            const loc = locations.find(l => l.id === id);
+            if (loc && loc.availability > 0) {
+                loc.availability--;
+                loc.counter = (loc.counter || 0) + 1; // Also increment visit counter
+                saveToStorage();
+                renderLocations();
+                
+                if (loc.availability === 0) {
+                    alert(`⚠️ ${loc.name} is now out of stock!`);
+                }
+            }
+        }
+
         // Reset counter
         function resetCounter(id) {
             if (confirm('Reset visit counter to 0?')) {
@@ -847,71 +868,129 @@
             }
         }
 
-		// Show QR code
-        function showQRCode() {
-            document.getElementById('tableView').style.display = 'none';
-            document.getElementById('gridView').style.display = 'none';
-            document.getElementById('qrView').style.display = 'block';
-            
-            const qrContainer = document.getElementById('qrcode');
+// Replace the showQRCode function in manager.html with this updated version
+// that uses the backend share function for cross-device compatibility
+
+function showQRCode() {
+    document.getElementById('tableView').style.display = 'none';
+    document.getElementById('gridView').style.display = 'none';
+    document.getElementById('qrView').style.display = 'block';
+    
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = '';
+    
+    if (locations.length === 0) {
+        qrContainer.innerHTML = '<p style="color: #718096;">Add locations first to generate QR code</p>';
+        return;
+    }
+    
+    // Show loading state
+    qrContainer.innerHTML = '<div class="spinner"></div><p>Generating shareable QR code...</p>';
+    
+    // Save locations to backend and get share code
+    fetch('/.netlify/functions/share', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            locations: locations
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code && data.url) {
+            // Clear container
             qrContainer.innerHTML = '';
             
-            if (locations.length === 0) {
-                qrContainer.innerHTML = '<p style="color: #718096;">Add locations first to generate QR code</p>';
-                return;
-            }
+            // Generate QR code with the share URL
+            new QRCode(qrContainer, {
+                text: data.url,
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
             
-            // Encode locations in URL hash for sharing
-            const locationsData = encodeURIComponent(JSON.stringify(locations));
-            const url = SITE_URL + '#' + locationsData;
+            // Show info below QR code
+            const infoDisplay = document.createElement('div');
+            infoDisplay.style.cssText = 'margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; font-size: 14px; color: #4a5568;';
+            infoDisplay.innerHTML = `
+                <strong>✅ QR Code Ready!</strong><br><br>
+                <div style="margin: 10px 0;">
+                    <strong>Share Code:</strong> ${data.code}<br>
+                    <small>This code contains ${locations.length} location(s)</small><br>
+                    <small style="color: #48bb78;">✓ Works across different devices!</small>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px;">
+                    <strong>Share Link:</strong><br>
+                    <a href="${data.url}" target="_blank" style="color: #667eea; word-break: break-all; font-size: 12px;">${data.url}</a>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #718096;">
+                    <em>This link expires in ${data.expiresIn}</em>
+                </div>
+            `;
+            qrContainer.appendChild(infoDisplay);
             
-            console.log('Generating QR for URL with', locations.length, 'locations');
-            
-            // Check if URL is too long for QR code (generally safe up to ~2000 chars)
-            if (url.length > 2000) {
-                // If too many locations, just include essential data
-                const simplifiedLocations = locations.map(loc => ({
-                    id: loc.id,
-                    name: loc.name,
-                    address: loc.address,
-                    phone: loc.phone,
-                    link: loc.link,
-                    coordinates: loc.coordinates,
-                    number: loc.number
-                }));
-                const simplifiedUrl = SITE_URL + '#' + encodeURIComponent(JSON.stringify(simplifiedLocations));
-                
-                if (simplifiedUrl.length > 2000) {
-                    qrContainer.innerHTML = '<p style="color: #f56565;">Too many locations for QR code. Consider reducing the number of locations or using the export/import feature instead.</p>';
-                    return;
+            // Share button
+            const shareButton = document.createElement('button');
+            shareButton.className = 'btn btn-primary';
+            shareButton.style.cssText = 'margin-top: 20px; width: 100%;';
+            shareButton.textContent = '📱 Share via Text/Email';
+            shareButton.onclick = function() {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Location Map',
+                        text: `View ${locations.length} locations on the map`,
+                        url: data.url
+                    }).catch(err => console.log('Error sharing:', err));
+                } else {
+                    navigator.clipboard.writeText(data.url).then(() => {
+                        alert('Link copied to clipboard!');
+                    });
                 }
-                
-                url = simplifiedUrl;
-            }
+            };
+            qrContainer.appendChild(shareButton);
             
-            try {
-                new QRCode(qrContainer, {
-                    text: url,
-                    width: 256,
-                    height: 256,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.L
-                });
-                
-                // Show info below QR code
-                const urlDisplay = document.createElement('div');
-                urlDisplay.style.cssText = 'margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; font-size: 12px; color: #4a5568;';
-                urlDisplay.innerHTML = '<strong>QR Code Ready!</strong><br><br>' +
-                    'This QR code contains ' + locations.length + ' location(s).<br>' +
-                    'Anyone who scans this will see these locations on their map.<br><br>' +
-                    '<small>Note: QR codes work best with up to 10-15 locations. For more locations, use the Export feature.</small>';
-                qrContainer.appendChild(urlDisplay);
-            } catch (error) {
-                console.error('Error generating QR code:', error);
-                qrContainer.innerHTML = '<p style="color: #f56565;">Error generating QR code. Please try again.</p>';
-            }
+        } else {
+            throw new Error('Invalid response from server');
         }
+    })
+    .catch(error => {
+        console.error('Error generating share code:', error);
+        
+        // Fallback to localStorage-based sharing
+        qrContainer.innerHTML = '';
+        
+        const shareCode = Date.now().toString(36);
+        localStorage.setItem('share_' + shareCode, JSON.stringify({
+            code: shareCode,
+            locations: locations,
+            created: new Date().toISOString()
+        }));
+        
+        const fallbackUrl = SITE_URL + '?share=' + shareCode;
+        
+        new QRCode(qrContainer, {
+            text: fallbackUrl,
+            width: 256,
+            height: 256,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        const errorDisplay = document.createElement('div');
+        errorDisplay.style.cssText = 'margin-top: 20px; padding: 15px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; font-size: 14px; color: #c53030;';
+        errorDisplay.innerHTML = `
+            <strong>⚠️ Offline Mode</strong><br><br>
+            QR code generated, but it will only work on this device.<br>
+            For cross-device sharing, check your internet connection.
+        `;
+        qrContainer.appendChild(errorDisplay);
+    });
+}
 
         // Toggle export menu
         function toggleExportMenu() {
